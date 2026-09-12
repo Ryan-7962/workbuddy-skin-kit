@@ -54,7 +54,14 @@ export function buildSkinMenuScript({ entries, activeId, styleId, menuId, cssTem
   root.id = data.menuId;
   let savedPos = null;
   try { savedPos = JSON.parse(localStorage.getItem("workbuddySkinMenuPos") ?? "null"); } catch {}
-  const hasSavedPos = savedPos && isFinite(savedPos.x) && isFinite(savedPos.y);
+  // 位置必须落在当前视口内才采用：窗口变小或换显示器后，旧坐标会把按钮推到屏幕外，
+  // 表现为"🎨 按钮消失"。校验失败就退回默认的右上角定位，并清掉已失效的坐标。
+  const posInViewport = (p) =>
+    !!p && isFinite(p.x) && isFinite(p.y) &&
+    p.x >= 0 && p.y >= 0 &&
+    p.x <= window.innerWidth - 46 && p.y <= window.innerHeight - 46;
+  const hasSavedPos = posInViewport(savedPos);
+  if (!hasSavedPos && savedPos) { try { localStorage.removeItem("workbuddySkinMenuPos"); } catch {} }
   root.style.cssText = "position:fixed;" + (hasSavedPos ? "left:" + Math.round(savedPos.x) + "px;top:" + Math.round(savedPos.y) + "px;" : "top:48px;right:16px;") + "z-index:2147483000;font:500 13px/1.4 system-ui;user-select:none;touch-action:none;";
 
   const button = document.createElement("button");
@@ -299,6 +306,21 @@ export function buildSkinMenuScript({ entries, activeId, styleId, menuId, cssTem
     button.addEventListener("pointermove", onMove);
     button.addEventListener("pointerup", onUp);
   });
+
+  // 窗口被缩小后把按钮拉回视口，避免再次"消失"；重复注入时替换旧监听器，避免累积
+  const clampIntoViewport = () => {
+    const rect = root.getBoundingClientRect();
+    if (rect.left >= 0 && rect.top >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight) return;
+    const nx = Math.max(0, Math.min(rect.left, window.innerWidth - rect.width - 8));
+    const ny = Math.max(0, Math.min(rect.top, window.innerHeight - rect.height - 8));
+    root.style.left = nx + "px";
+    root.style.top = ny + "px";
+    root.style.right = "auto";
+    try { localStorage.setItem("workbuddySkinMenuPos", JSON.stringify({ x: Math.round(nx), y: Math.round(ny) })); } catch {}
+  };
+  if (window.__workbuddySkinClamp) window.removeEventListener("resize", window.__workbuddySkinClamp);
+  window.__workbuddySkinClamp = clampIntoViewport;
+  window.addEventListener("resize", clampIntoViewport);
 
   root.append(button, panel, picker);
   document.body.appendChild(root);
