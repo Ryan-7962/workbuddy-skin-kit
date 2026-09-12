@@ -94,6 +94,12 @@ body[data-application-name=workbuddy] {
     url(${JSON.stringify(heroDataUrl)}) right center / cover no-repeat fixed !important;
 }
 
+/* body/html 默认是纯白，深色主题下会从各层缝隙露出刺眼白块 */
+html,
+body {
+  background: var(--wb-surface) !important;
+}
+
 /* 关键：teams-container 是 #root 直接子层，默认有不透明灰底，会完全盖住背景图 */
 .teams-container,
 .teams-container.is-mac {
@@ -105,8 +111,16 @@ body[data-application-name=workbuddy] {
   background: transparent !important;
 }
 
-/* 内容区内的子层也透明（否则会盖住背景图和磨砂层） */
+/* 内容区内的子层也透明（否则会盖住背景图和磨砂层）
+   注意：WorkBuddy 5.5.6 起对话区主容器改名为 .conversation-shell 并自带不透明底色
+   （跟随 VS Code 深浅模式），漏掉它就会表现为"只有侧边栏和顶栏变色、中间执行框还是不透明"。
+   .teams-main-content / .teams-content-wrapper 是新版布局容器，一并纳入以防后续版本再加底色。 */
 .conversation-list,
+.conversation-shell,
+.conversation-page-chrome,
+.conversation-timeline,
+.teams-main-content,
+.teams-content-wrapper,
 .main-content,
 .main-content--welcome,
 .sidebar-next {
