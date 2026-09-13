@@ -45,12 +45,18 @@ body[data-application-name=workbuddy] {
   --cb-panel-bg-primary: color-mix(in srgb, var(--wb-surface) 88%, transparent) !important;
   --cb-team-member-card-background: color-mix(in srgb, var(--wb-surface) 88%, transparent) !important;
 
+  /* 强调色的「可读版」：混入 text 色，方向由主题自动决定——
+     浅色主题 text 是深色 → accent 被压深，在浅底上看得见；
+     深色主题 text 是浅色 → accent 被提亮，在深底上看得见。
+     直接把品牌色拿来当链接/按钮色，浅色主题下对比度只有 ~1.9（阈值 3），等于看不见。 */
+  --wb-accent-readable: color-mix(in srgb, var(--wb-accent) 64%, var(--wb-text));
+
   /* 文字 */
   --cb-text-primary: var(--wb-text) !important;
   --cb-text-secondary: color-mix(in srgb, var(--wb-text) 70%, transparent) !important;
   --cb-text-disabled: color-mix(in srgb, var(--wb-text) 42%, transparent) !important;
-  --cb-text-link: var(--wb-accent) !important;
-  --cb-text-error-active: var(--wb-accent) !important;
+  --cb-text-link: var(--wb-accent-readable) !important;
+  --cb-text-error-active: var(--wb-accent-readable) !important;
 
   /* VS Code 主题色包装 */
   --cb-vscode-editor-background: var(--wb-surface) !important;
@@ -73,13 +79,14 @@ body[data-application-name=workbuddy] {
   --cb-vscode-widget-border: color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
   --cb-vscode-panel-border: color-mix(in srgb, var(--wb-accent) 30%, transparent) !important;
 
-  /* 按钮 */
-  --cb-button-dark-background: var(--wb-accent) !important;
-  --cb-button-dark-foreground: #ffffff !important;
-  --cb-button-dark-hover-background: color-mix(in srgb, var(--wb-accent) 85%, #000000) !important;
-  --cb-vscode-button-background: var(--wb-accent) !important;
-  --cb-vscode-button-foreground: #ffffff !important;
-  --cb-vscode-button-hoverBackground: color-mix(in srgb, var(--wb-accent) 85%, #000000) !important;
+  /* 按钮：底色用可读版强调色，前景用 surface（互为反白），
+     这样深浅主题都不用各自判断该配黑字还是白字 */
+  --cb-button-dark-background: var(--wb-accent-readable) !important;
+  --cb-button-dark-foreground: var(--wb-surface) !important;
+  --cb-button-dark-hover-background: color-mix(in srgb, var(--wb-accent-readable) 88%, var(--wb-text)) !important;
+  --cb-vscode-button-background: var(--wb-accent-readable) !important;
+  --cb-vscode-button-foreground: var(--wb-surface) !important;
+  --cb-vscode-button-hoverBackground: color-mix(in srgb, var(--wb-accent-readable) 88%, var(--wb-text)) !important;
 
   /* 描边 */
   --cb-stroke-secondary: color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
