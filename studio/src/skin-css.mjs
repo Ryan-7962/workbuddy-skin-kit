@@ -161,6 +161,49 @@ body {
   backdrop-filter: blur(18px) saturate(1.08);
 }
 
+/* ── 内容组件配色 ──────────────────────────────────────────────
+   cr-* 是 WorkBuddy 的消息渲染层，.cb-agent-card 是卡片组件，它们用的是**固定色值**，
+   既不认 --cb-* 也不认 --vscode-*（实测 body 上不存在任何 --vscode-* 变量）。
+   所以只覆盖设计变量会出现"面板已经变色、正文仍是深黑字"的错配：
+     深色主题下 → 深底 × 硬编码深字 = 不可读
+     卡片组件   → 浅灰底 × 已跟随主题的浅字 = 也不可读
+   只能按类名直接压过去。 */
+.cr-markdown,
+.cr-text-block,
+.cr-agent__content,
+.cr-agent__body,
+.cr-agent__body-row,
+.cr-document,
+.cr-message-list,
+.conversation-timeline {
+  color: var(--wb-text) !important;
+}
+
+/* 代码块 / 引用块：底色由主题色推导，保证与正文有层次但不刺眼 */
+.cr-code-like-box,
+.cr-code-like-box__header,
+.cr-text-block--code,
+.cr-markdown pre,
+.cr-markdown code {
+  background: color-mix(in srgb, var(--wb-surface) 86%, var(--wb-text)) !important;
+  color: var(--wb-text) !important;
+}
+
+/* 表格表头 */
+.cr-markdown th,
+.cr-document th {
+  background: color-mix(in srgb, var(--wb-surface) 88%, var(--wb-text)) !important;
+  color: var(--wb-text) !important;
+}
+
+/* 卡片与输入框：底色跟随主题，文字用正文色 */
+.cb-agent-card,
+.cr-input-container,
+.cr-input-box__main {
+  background: color-mix(in srgb, var(--wb-surface) 93%, var(--wb-text)) !important;
+  color: var(--wb-text) !important;
+}
+
 /* brand 文案（copy 为空时不显示） */
 #root::before {
   position: fixed;

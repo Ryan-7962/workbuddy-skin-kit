@@ -115,6 +115,23 @@ node "SKILL_DIR/tools/generate-launcher.mjs" --theme-id <id> --studio-dir "SKILL
 - 写 .vbs 时必须用 **UTF-16LE + BOM**（`Buffer.concat([Buffer.from([0xff,0xfe]), Buffer.from(s,'utf16le')])`），否则中文路径会乱码。
 - **不要**为了持久化去改 `app.asar`：破坏签名、WorkBuddy 升级即失效，维护成本远高于收益。
 
+## 配色覆盖范围（变量覆盖不到的地方，重要）
+
+`--cb-*` 设计变量只能改「面板级」配色（侧边栏、顶栏、按钮、描边）。**内容渲染层完全不认变量，用的是固定色值**：
+
+| 组件 | 类名 | 固定色 | 只覆盖变量会怎样 |
+|---|---|---|---|
+| 消息正文 | `.cr-markdown` / `.cr-text-block` / `.cr-agent__content` | `rgba(0,0,0,0.9)` | 深色主题下 **深底 × 深字 = 不可读** |
+| 代码块 | `.cr-code-like-box` / `__header` | `rgb(255,255,255)` | 深色底上突兀的白色块 |
+| 卡片 | `.cb-agent-card` | 底 `rgb(230,230,230)` | 底色没变，但文字已跟随 `--wb-text` → **浅底 × 浅字 = 也不可读** |
+| 输入框 | `.cr-input-container` | `rgb(255,255,255)` | 同上 |
+
+**症状识别**：如果同时看到「深底 × 深字」和「浅底 × 浅字」，就是这个问题——不是遮罩强度不对，是内容层没被覆盖。
+
+**处理**：在 `skin-css.mjs` 的「内容组件配色」一节按类名直接覆盖；底色一律用 `color-mix(in srgb, var(--wb-surface) 86~93%, var(--wb-text))` 从主题色推导，深浅主题自动适配，不必写两套。
+
+**别绕的路**：`body` 上**不存在** `--vscode-*` 变量（实测为空），想靠覆盖 VS Code 语义变量去影响 `cr-*` 渲染器行不通。
+
 ## 主内容区遮罩强度（按素材花哨程度调）
 
 `[data-view-id=main-content]` 上有一层半透明面板色遮罩，作用是让背景图"隐约可见"而不是"抢正文的戏"。默认值：
