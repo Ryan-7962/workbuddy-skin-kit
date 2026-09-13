@@ -123,7 +123,17 @@ body {
 .teams-content-wrapper,
 .main-content,
 .main-content--welcome,
-.sidebar-next {
+.sidebar-next,
+.wb-home-route,
+.claw-workspace,
+.automation-main-page {
+  background: transparent !important;
+}
+
+/* 兜底：WorkBuddy 各功能页的顶层容器统一命名为 wb-*-route（欢迎页 = .wb-home-route），
+   每个 route 各用一套容器、逐个补必然漏。按命名规律一次性覆盖，新增页面无需再改，
+   否则就会出现"对话页有壁纸、新建任务页还是默认底色"这类问题。 */
+[class*="wb-"][class*="-route"] {
   background: transparent !important;
 }
 
