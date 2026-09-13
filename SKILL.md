@@ -115,6 +115,21 @@ node "SKILL_DIR/tools/generate-launcher.mjs" --theme-id <id> --studio-dir "SKILL
 - 写 .vbs 时必须用 **UTF-16LE + BOM**（`Buffer.concat([Buffer.from([0xff,0xfe]), Buffer.from(s,'utf16le')])`），否则中文路径会乱码。
 - **不要**为了持久化去改 `app.asar`：破坏签名、WorkBuddy 升级即失效，维护成本远高于收益。
 
+## 主内容区遮罩强度（按素材花哨程度调）
+
+`[data-view-id=main-content]` 上有一层半透明面板色遮罩，作用是让背景图"隐约可见"而不是"抢正文的戏"。默认值：
+
+```css
+background: linear-gradient(180deg,
+  color-mix(in srgb, var(--wb-surface) 62%, transparent) 0 40%,
+  color-mix(in srgb, var(--wb-surface) 84%, transparent) 100%) !important;
+```
+
+- **纯透明（0%）不可取**：正文会直接压在人物、海报大字上，浅色主题下几乎读不出来
+- **实用区间 55%~70%**：背景仍有明显存在感，正文可读
+- 素材越花（满屏大字、高对比图形）越要往 70% 靠；素材干净（纯色渐变、人像留白多）可降到 45%
+- 快速试强度不用改源码：`node tools/test_mask.mjs <port> <输出目录> "45,60,75"`，它会临时注入覆盖层并逐档截图，退出时自动还原
+
 ## 日夜间适配（已内置机制，不用额外开发）
 
 - 主题的 `surface` 颜色决定整个 WorkBuddy 联动切深色/浅色模式（注入脚本里的 `applyMode` 会翻转 vscode-dark/light）。

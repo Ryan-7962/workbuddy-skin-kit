@@ -126,7 +126,9 @@ body {
 .sidebar-next,
 .wb-home-route,
 .claw-workspace,
-.automation-main-page {
+.automation-main-page,
+.expert-center-page,
+.expert-center-light {
   background: transparent !important;
 }
 
@@ -144,9 +146,13 @@ body {
   backdrop-filter: blur(20px) saturate(1.12);
 }
 
-/* 主内容区：顶部透出底图，底部轻微渐变保证内容可读 */
+/* 主内容区：加一层半透明面板色遮罩。
+   背景图保持可见（约四成透出），但正文对比度恢复到可读水平——
+   纯透明会让文字直接压在人物、海报大字上，浅色主题下几乎读不出来。 */
 [data-view-id=main-content] {
-  background: linear-gradient(180deg, transparent 0 40%, color-mix(in srgb, var(--wb-surface) 74%, transparent) 100%) !important;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--wb-surface) 62%, transparent) 0 40%,
+    color-mix(in srgb, var(--wb-surface) 84%, transparent) 100%) !important;
 }
 
 /* 详情面板半透明磨砂 */
