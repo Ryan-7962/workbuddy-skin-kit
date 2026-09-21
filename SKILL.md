@@ -219,7 +219,9 @@ background: linear-gradient(180deg,
 | 重启电脑/WorkBuddy 后皮肤没了 | 正常，注入是运行时行为 | 重新双击 cmd |
 | 主题颜色不对（深图浅底） | 自动取色按平均亮度误判 | 按 Step 3 改 theme.json |
 | 🎨 按钮"消失"（`cli status` 显示 `menu:true` 但肉眼找不到） | localStorage 的拖拽坐标在当前窗口下越界（此前在更宽的窗口拖过） | 已修：注入时校验坐标是否在视口内、失效则回退右上角默认位；并监听 resize 自动拉回。旧环境可先清 `localStorage.workbuddySkinMenuPos` |
+| 🎨 按钮**看得见却点不动**（`elementFromPoint` 命中测试显示命中的就是按钮，样式也全正常） | 按钮落在顶栏 `-webkit-app-region: drag` 区域内。Electron 的拖拽区是**几何区域**，落在其中的鼠标事件在浏览器进程就被当成"拖动标题栏"消费掉，渲染进程根本收不到 click | 已修：注入时扫描 drag 区域算出安全落点（顶栏底边 + 10px）作为默认位；拖拽下界与 resize 夹取同步使用该安全线。**关键：CDP 的 `Input.dispatchMouseEvent` 绕过该拦截，所以"程序点击成功"不能证明真人可达**——必须用几何断言：`tools/diag_skin_click.mjs`（按钮与 drag 区域重叠面积须为 0）。换版本后跑 `tools/audit_drag_band.mjs` 逐页核验带高 |
 | 只有侧边栏/顶栏变色，中间执行框仍不透明 | WorkBuddy 5.5.6 起对话区主容器改名为 `.conversation-shell` 且自带不透明底色（跟随 VS Code 深浅模式），旧版置透明清单没覆盖它；同时 `.main-content` 已改名 `.teams-main-content` | 已修：把 `.conversation-shell` / `.conversation-page-chrome` / `.conversation-timeline` / `.teams-main-content` / `.teams-content-wrapper` 纳入置透明规则，并把 `html/body` 背景设为 `var(--wb-surface)`（默认纯白会在深色主题下露白块）。换大版本后重跑 `tools/diag_skin_css.mjs` 核对锚点 |
+| 主题面板底部几个主题够不到 | 面板自按钮下方起排，主题多于窗口高度时被裁切，且不能滚动 | 已修：展开前按"按钮下方可用空间"设 `max-height`（最小 140px）并允许纵向滚动。**约束：浮动面板的高度必须由可用空间推导，不能写死**，否则按钮位置一变就会重新溢出 |
 | 某个功能页（新建任务 / 助理 / 定时任务…）背景仍是默认底色 | 每个 route 用各自命名的顶层容器：欢迎页 `.wb-home-route`、助理 `.claw-workspace`、定时任务 `.automation-main-page`——逐个补必然漏 | 已修：置透明清单补全，并加 `[class*="wb-"][class*="-route"]` 兜底。**换版本后跑 `tools/audit_routes.mjs` 逐页核验**（会点进每个入口，报告该页是否还有大块不透明容器） |
 
 ## 更新 studio（可选）

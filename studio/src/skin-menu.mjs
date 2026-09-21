@@ -52,26 +52,46 @@ export function buildSkinMenuScript({ entries, activeId, styleId, menuId, cssTem
   document.getElementById(data.menuId)?.remove();
   const root = document.createElement("div");
   root.id = data.menuId;
+  // WorkBuddy 顶栏（div.inactive 全宽条 + .workbuddy-topbar）带 -webkit-app-region:drag。
+  // Electron 的拖拽区是"几何区域"：落在其中的鼠标事件在浏览器进程就被当成拖动标题栏吞掉，
+  // 渲染进程根本收不到 click —— 表现为按钮可见、命中测试也命中、但真人点不动。
+  // 因此默认落点必须算在拖拽带下方，而不是写死 top:48px。
+  const computeSafeTop = () => {
+    const limit = Math.min(240, Math.max(120, window.innerHeight * 0.4));
+    let bottom = 0;
+    // 先按几何粗筛（只取与顶部条带相交、且有一定宽度的容器），再查 computed style，避免全量取值卡顿
+    for (const el of document.querySelectorAll("body div")) {
+      const b = el.getBoundingClientRect();
+      if (b.bottom <= 0 || b.top > limit) continue;
+      if (b.width < window.innerWidth * 0.25) continue;
+      const s = getComputedStyle(el);
+      const reg = s.webkitAppRegion || s.getPropertyValue("-webkit-app-region") || "";
+      if (reg === "drag" && b.bottom > bottom) bottom = b.bottom;
+    }
+    return bottom ? Math.round(bottom + 10) : 48;
+  };
+  const SAFE_TOP = computeSafeTop();
+
   let savedPos = null;
   try { savedPos = JSON.parse(localStorage.getItem("workbuddySkinMenuPos") ?? "null"); } catch {}
-  // 位置必须落在当前视口内才采用：窗口变小或换显示器后，旧坐标会把按钮推到屏幕外，
-  // 表现为"🎨 按钮消失"。校验失败就退回默认的右上角定位，并清掉已失效的坐标。
-  const posInViewport = (p) =>
+  // 位置必须同时满足两条才采用：①落在当前视口内（窗口变小或换显示器后旧坐标会推出屏幕外，
+  // 表现为"🎨 按钮消失"）②不落在顶栏拖拽带内（否则按钮点不动）。任一不满足就退回默认落点。
+  const posUsable = (p) =>
     !!p && isFinite(p.x) && isFinite(p.y) &&
-    p.x >= 0 && p.y >= 0 &&
+    p.x >= 0 && p.y >= SAFE_TOP &&
     p.x <= window.innerWidth - 46 && p.y <= window.innerHeight - 46;
-  const hasSavedPos = posInViewport(savedPos);
+  const hasSavedPos = posUsable(savedPos);
   if (!hasSavedPos && savedPos) { try { localStorage.removeItem("workbuddySkinMenuPos"); } catch {} }
-  root.style.cssText = "position:fixed;" + (hasSavedPos ? "left:" + Math.round(savedPos.x) + "px;top:" + Math.round(savedPos.y) + "px;" : "top:48px;right:16px;") + "z-index:2147483000;font:500 13px/1.4 system-ui;user-select:none;touch-action:none;";
+  root.style.cssText = "position:fixed;" + (hasSavedPos ? "left:" + Math.round(savedPos.x) + "px;top:" + Math.round(savedPos.y) + "px;" : "top:" + SAFE_TOP + "px;right:16px;") + "z-index:2147483000;font:500 13px/1.4 system-ui;user-select:none;touch-action:none;-webkit-app-region:no-drag;";
 
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = "\\u{1F3A8}";
   button.title = "WorkBuddy Skin Studio";
-  button.style.cssText = "display:block;margin-left:auto;width:38px;height:38px;border-radius:50%;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 3px 12px rgba(0,0,0,.24);cursor:pointer;font-size:19px;padding:0;";
+  button.style.cssText = "display:block;margin-left:auto;width:38px;height:38px;border-radius:50%;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 3px 12px rgba(0,0,0,.24);cursor:pointer;font-size:19px;padding:0;-webkit-app-region:no-drag;";
 
   const panel = document.createElement("div");
-  panel.style.cssText = "display:none;margin-top:8px;min-width:200px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.18);color:#17344f;";
+  panel.style.cssText = "display:none;margin-top:8px;min-width:200px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.18);color:#17344f;overflow-y:auto;overscroll-behavior:contain;";
 
   const rows = new Map();
   const paint = (id) => {
@@ -287,8 +307,11 @@ export function buildSkinMenuScript({ entries, activeId, styleId, menuId, cssTem
       if (!dragMoved && Math.abs(e2.clientX - startX) + Math.abs(e2.clientY - startY) < 5) return;
       dragMoved = true;
       button.style.cursor = "grabbing";
-      const nx = Math.min(Math.max(0, e2.clientX - offX), window.innerWidth - rect.width);
-      const ny = Math.min(Math.max(0, e2.clientY - offY), window.innerHeight - rect.height);
+      // 下界取拖拽带底边：拖进顶栏后按钮会被 Electron 当作标题栏吞掉点击，直接从拖动层禁止
+      const minTop = computeSafeTop();
+      const maxTop = Math.max(minTop, window.innerHeight - rect.height - 8);
+      const nx = Math.min(Math.max(8, e2.clientX - offX), Math.max(8, window.innerWidth - rect.width - 8));
+      const ny = Math.min(Math.max(minTop, e2.clientY - offY), maxTop);
       root.style.left = nx + "px";
       root.style.top = ny + "px";
       root.style.right = "auto";
@@ -299,8 +322,13 @@ export function buildSkinMenuScript({ entries, activeId, styleId, menuId, cssTem
       button.style.cursor = "grab";
       if (dragMoved) {
         try { localStorage.setItem("workbuddySkinMenuPos", JSON.stringify({ x: parseInt(root.style.left, 10), y: parseInt(root.style.top, 10) })); } catch {}
+      } else if (panel.style.display === "none") {
+        // 面板高度不得超过按钮下方可用空间，否则底部主题会被窗口裁掉、鼠标够不到
+        const spaceBelow = window.innerHeight - root.getBoundingClientRect().bottom - 14;
+        panel.style.maxHeight = Math.max(140, Math.round(spaceBelow)) + "px";
+        panel.style.display = "block";
       } else {
-        panel.style.display = panel.style.display === "none" ? "block" : "none";
+        panel.style.display = "none";
       }
     };
     button.addEventListener("pointermove", onMove);
@@ -310,9 +338,11 @@ export function buildSkinMenuScript({ entries, activeId, styleId, menuId, cssTem
   // 窗口被缩小后把按钮拉回视口，避免再次"消失"；重复注入时替换旧监听器，避免累积
   const clampIntoViewport = () => {
     const rect = root.getBoundingClientRect();
-    if (rect.left >= 0 && rect.top >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight) return;
+    const minTop = computeSafeTop();
+    const inViewport = rect.left >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight;
+    if (inViewport && rect.top >= minTop) return;
     const nx = Math.max(0, Math.min(rect.left, window.innerWidth - rect.width - 8));
-    const ny = Math.max(0, Math.min(rect.top, window.innerHeight - rect.height - 8));
+    const ny = Math.max(minTop, Math.min(rect.top, Math.max(minTop, window.innerHeight - rect.height - 8)));
     root.style.left = nx + "px";
     root.style.top = ny + "px";
     root.style.right = "auto";
